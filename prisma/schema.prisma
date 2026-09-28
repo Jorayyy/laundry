@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum PricingType {
+  PER_KG
+  PER_ITEM
+  FIXED
+}
+
+enum OrderStatus {
+  RECEIVED
+  SORTING
+  WASHING
+  DRYING
+  FOLDING
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  GCASH
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
+enum ExpenseCategory {
+  DETERGENT
+  FABRIC_SOFTENER
+  ELECTRICITY
+  WATER
+  RENT
+  SALARIES
+  MAINTENANCE
+  PACKAGING
+  TRANSPORTATION
+  EQUIPMENT
+  SUPPLIES
+  OTHER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STAFF)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ordersCreated  Order[]       @relation("OrderCreatedBy")
+  ordersUpdated  Order[]       @relation("OrderUpdatedBy")
+  payments       Payment[]
+  expenses       Expense[]
+  activities     OrderActivity[]
+  auditLogs      AuditLog[]
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  address   String?
+  notes     String?
+  archivedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  orders Order[]
+
+  @@index([phone])
+  @@index([name])
+}
+
+model Service {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  pricingType PricingType @default(PER_KG)
+  price       Decimal     @db.Decimal(12, 2)
+  minQuantity Decimal     @default(1) @db.Decimal(10, 2)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items OrderItem[]
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNo       String        @unique
+  status        OrderStatus   @default(RECEIVED)
+  paymentStatus PaymentStatus @default(UNPAID)
+  receivedAt    DateTime      @default(now())
+  dueAt         DateTime?
+  completedAt   DateTime?
+  subtotal      Decimal       @default(0) @db.Decimal(12, 2)
+  discount      Decimal       @default(0) @db.Decimal(12, 2)
+  total         Decimal       @default(0) @db.Decimal(12, 2)
+  paidAmount    Decimal       @default(0) @db.Decimal(12, 2)
+  notes         String?
+  internalNotes String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  createdById String
+  createdBy   User     @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?    @relation("OrderUpdatedBy", fields: [updatedById], references: [id])
+
+  items     OrderItem[]
+  payments  Payment[]
+  activities OrderActivity[]
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([receivedAt])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id          String      @id @default(cuid())
+  serviceName String
+  pricingType PricingType
+  unitPrice   Decimal     @db.Decimal(12, 2)
+  quantity    Decimal     @db.Decimal(10, 2)
+  subtotal    Decimal     @db.Decimal(12, 2)
+
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id])
+}
+
+model OrderActivity {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  action    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus?
+  message   String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  orderId   String
+  order     Order         @relation(fields: [orderId], references: [id])
+  amount    Decimal       @db.Decimal(12, 2)
+  method    PaymentMethod @default(CASH)
+  reference String?
+  notes     String?
+  voidedAt  DateTime?
+  paidAt    DateTime      @default(now())
+  createdAt DateTime      @default(now())
+  createdById String
+  createdBy User          @relation(fields: [createdById], references: [id])
+
+  @@index([paidAt])
+  @@index([orderId])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  category    ExpenseCategory
+  description String?
+  amount      Decimal         @db.Decimal(12, 2)
+  spentAt     DateTime        @default(now())
+  method      PaymentMethod?
+  reference   String?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  createdById String
+  createdBy   User            @relation(fields: [createdById], references: [id])
+
+  @@index([spentAt])
+  @@index([category])
+}
+
+model OrderCounter {
+  key   String @id
+  value Int    @default(0)
+}
+
+model Settings {
+  id            String  @id @default("single")
+  businessName  String  @default("My Laundry Shop")
+  address       String?
+  phone         String?
+  email         String?
+  currency      String  @default("PHP")
+  orderPrefix   String  @default("LD")
+  receiptHeader String?
+  receiptFooter String  @default("Thank you! Present this stub upon claiming. Claims without this stub may be subject to verification.")
+  updatedAt     DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+}
