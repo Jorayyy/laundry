@@ -59,3 +59,17 @@ export async function archiveCustomer(id: string): Promise<ActionState> {
   revalidatePath("/customers");
   return { success: "Customer archived." };
 }
+
+export async function redeemLoyalty(id: string): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    await db.customer.update({ where: { id }, data: { loyaltyRedemptions: { increment: 1 } } });
+    await logAudit({ userId: user.id, action: "LOYALTY_REDEEMED", entity: "Customer", entityId: id });
+    revalidatePath("/customers");
+    revalidatePath(`/customers/${id}`);
+    return { success: "Reward redeemed — loyalty card reset." };
+  } catch (e) {
+    console.error("[loyalty:redeem]", e);
+    return { error: "Could not redeem reward." };
+  }
+}

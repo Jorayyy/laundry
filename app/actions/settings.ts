@@ -21,6 +21,7 @@ const settingsSchema = z.object({
     .default("LD"),
   receiptHeader: z.string().trim().optional().default(""),
   receiptFooter: z.string().trim().optional().default(""),
+  loyaltyThreshold: z.coerce.number().int().min(1, "Threshold must be at least 1.").max(100).default(10),
 });
 
 export async function saveSettings(_: ActionState, formData: FormData): Promise<ActionState> {

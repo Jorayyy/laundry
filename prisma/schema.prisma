@@ -84,6 +84,7 @@ model Customer {
   email     String?
   address   String?
   notes     String?
+  loyaltyRedemptions Int @default(0)
   archivedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -221,6 +222,7 @@ model Settings {
   orderPrefix   String  @default("LD")
   receiptHeader String?
   receiptFooter String  @default("Thank you! Present this stub upon claiming. Claims without this stub may be subject to verification.")
+  loyaltyThreshold Int  @default(10)
   updatedAt     DateTime @updatedAt
 }
 

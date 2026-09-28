@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test tests/calc.test.ts",
+    "test": "node --import tsx --test tests/calc.test.ts tests/loyalty.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev"

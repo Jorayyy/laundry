@@ -5,24 +5,28 @@ import { requireUser } from "@/lib/auth";
 import { php, num, formatDateTime, formatDate } from "@/lib/money";
 import { PageHeader, StatusBadge, PaymentBadge, StatCard, methodLabel } from "@/components/bits";
 import { CustomerDialog } from "@/components/customers/customer-dialog";
+import { LoyaltyCard } from "@/components/loyalty-card";
 import { ActionButton } from "@/components/action-button";
 import { archiveCustomer } from "@/app/actions/customers";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
 
-  const customer = await db.customer.findUnique({
-    where: { id },
-    include: {
-      orders: {
-        orderBy: { receivedAt: "desc" },
-        include: { items: { select: { serviceName: true } } },
+  const [customer, settings] = await Promise.all([
+    db.customer.findUnique({
+      where: { id },
+      include: {
+        orders: {
+          orderBy: { receivedAt: "desc" },
+          include: { items: { select: { serviceName: true } } },
+        },
       },
-    },
-  });
+    }),
+    db.settings.findUnique({ where: { id: "single" } }),
+  ]);
   if (!customer) notFound();
 
   const activeOrders = customer.orders.filter((o) => o.status !== "CANCELLED");
@@ -115,6 +119,14 @@ export default async function CustomerProfilePage({ params }: { params: Promise<
         </div>
 
         <div className="space-y-4">
+          <LoyaltyCard
+            customerId={customer.id}
+            completedOrders={activeOrders.filter((o) => o.status === "COMPLETED").length}
+            redemptions={customer.loyaltyRedemptions}
+            threshold={settings?.loyaltyThreshold ?? 10}
+            canRedeem={user.role === "OWNER"}
+          />
+
           <div className="rounded-lg border bg-card">
             <div className="border-b px-4 py-3">
               <h2 className="text-sm font-semibold">Contact</h2>

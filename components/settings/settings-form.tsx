@@ -12,6 +12,7 @@ type Settings = {
   orderPrefix: string;
   receiptHeader?: string | null;
   receiptFooter?: string | null;
+  loyaltyThreshold: number;
 } | null;
 
 export function SettingsForm({ settings }: { settings: Settings }) {
@@ -35,7 +36,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
           <input name="email" type="email" defaultValue={settings?.email ?? ""} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Currency</label>
           <input name="currency" defaultValue={settings?.currency ?? "PHP"} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" />
@@ -43,6 +44,10 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Order number prefix</label>
           <input name="orderPrefix" defaultValue={settings?.orderPrefix ?? "LD"} placeholder="LD" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm uppercase" />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Loyalty stamps needed</label>
+          <input name="loyaltyThreshold" type="number" min={1} max={100} defaultValue={settings?.loyaltyThreshold ?? 10} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" />
         </div>
       </div>
       <div className="space-y-1.5">

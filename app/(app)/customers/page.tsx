@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { php, num, formatDate } from "@/lib/money";
 import { PageHeader, EmptyState } from "@/components/bits";
 import { Pagination, FilterBar, fieldClass } from "@/components/filters";
+import { loyaltyState } from "@/lib/loyalty";
 import { CustomerDialog } from "@/components/customers/customer-dialog";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function CustomersPage({
       }
     : { archivedAt: null };
 
-  const [customers, total] = await Promise.all([
+  const [customers, total, completedByCustomer, settings] = await Promise.all([
     db.customer.findMany({
       where,
       orderBy: { updatedAt: "desc" },
@@ -44,7 +45,12 @@ export default async function CustomersPage({
       },
     }),
     db.customer.count({ where }),
+    db.order.groupBy({ by: ["customerId"], where: { status: "COMPLETED" }, _count: true }),
+    db.settings.findUnique({ where: { id: "single" } }),
   ]);
+
+  const threshold = settings?.loyaltyThreshold ?? 10;
+  const completedMap = new Map(completedByCustomer.map((c) => [c.customerId, c._count]));
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -99,6 +105,11 @@ export default async function CustomersPage({
                         <Link href={`/customers/${c.id}`} className="font-medium hover:underline">
                           {c.name}
                         </Link>
+                        {loyaltyState(completedMap.get(c.id) ?? 0, c.loyaltyRedemptions, threshold).eligible ? (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            ★ Loyalty
+                          </span>
+                        ) : null}
                         {c.notes ? <p className="text-xs text-muted-foreground truncate max-w-52">{c.notes}</p> : null}
                       </td>
                       <td className="hidden sm:table-cell px-4 py-3 text-muted-foreground">
